@@ -53,6 +53,9 @@ namespace HpModifierUtil
 
                     int modifiedDelta = (int)((delta + fixedValue) * (1f + additiveRate / 100f));
                     modifiedDelta = Math.Max(0, modifiedDelta);
+
+                    // 補正後の回復量を反映
+                    value = current + modifiedDelta;
                 }
                 else
                 {
