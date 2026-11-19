@@ -74,6 +74,11 @@ namespace HpModifierUtil
                     value = current + modifiedDelta;
                 }
             }
+
+            public static void Postfix(BattleUnitModel __instance)
+            {
+                MaxHpModifierManager.UpdateHpMax(__instance);
+            }
         }
 
         [HarmonyPatch(typeof(BattleUnitModel), nameof(BattleUnitModel.TakeDamage))]
@@ -104,10 +109,19 @@ namespace HpModifierUtil
                 if (__instance == null)
                     return;
 
-                int min = MaxHpModifierManager.GetMinMaxHp(__instance);
+                // 最大体力を減少させる
+                long reducedMaxHp =
+                    (long)__result -
+                    MaxHpModifierManager.GetMaxHpReduction(__instance);
 
-                if (__result < min)
-                    __result = min;
+                // 最低最大体力を適用する
+                int min =
+                    MaxHpModifierManager.GetMinMaxHp(__instance);
+
+                __result = (int)Math.Max(
+                    reducedMaxHp,
+                    (long)min
+                );
             }
         }
 
@@ -129,24 +143,6 @@ namespace HpModifierUtil
             }
         }
 
-        // HP変更後に回復可能体力上限を適用
-        [HarmonyPatch]
-        public static class SetHpPatch
-        {
-            public static MethodBase TargetMethod()
-            {
-                return AccessTools.Method(
-                    typeof(BattleUnitModel),
-                    "set_hp",
-                    new Type[] { typeof(float) }
-                );
-            }
-
-            public static void Postfix(BattleUnitModel __instance)
-            {
-                MaxHpModifierManager.UpdateHpMax(__instance);
-            }
-        }
 
         // 戦闘開始時に初期化
         [HarmonyPatch(typeof(StageController), nameof(StageController.StartBattle))]

@@ -1,4 +1,4 @@
-﻿
+﻿using HarmonyLib;
 using System;
 using System.Collections.Generic;
 
@@ -6,13 +6,43 @@ namespace HpModifierUtil
 {
     public static class MaxHpModifierManager
     {
+        // 最大体力減少量
         private static readonly Dictionary<BattleUnitModel, int>
             maxHpReduction = [];
 
-        // 外部Modが実装するインターフェイス
+        // 回復可能体力減少量
+        private static readonly Dictionary<BattleUnitModel, int>
+            recoverableHpReduction = [];
+
+        // hpプロパティのバッキングフィールド
+        private static readonly AccessTools.FieldRef<BattleUnitModel, float>
+            HpRef = AccessTools.FieldRefAccess<BattleUnitModel, float>(
+                "<hp>k__BackingField"
+            );
+
+        // 外部Modが実装する最低最大体力提供インターフェイス
         public interface IMinMaxHp
         {
             int? MinMaxHp { get; }
+        }
+
+        // 減少量を安全に加算
+        private static void AddReduction(
+            Dictionary<BattleUnitModel, int> dictionary,
+            BattleUnitModel unit,
+            int amount)
+        {
+            if (unit == null || amount <= 0)
+                return;
+
+            dictionary.TryGetValue(unit, out int current);
+
+            long result = (long)current + amount;
+
+            dictionary[unit] = (int)Math.Min(
+                result,
+                int.MaxValue
+            );
         }
 
         // 最大体力減少量を取得
@@ -27,44 +57,41 @@ namespace HpModifierUtil
         }
 
         // 最大体力を減少させる
-        public static void DecreaseMaxHp(BattleUnitModel unit, int amount)
+        public static void DecreaseMaxHp(
+            BattleUnitModel unit,
+            int amount)
         {
             if (unit == null || amount <= 0)
                 return;
 
-            int current = GetMaxHpReduction(unit);
-
-            // intのオーバーフローを防止
-            maxHpReduction[unit] =
-                amount > int.MaxValue - current
-                    ? int.MaxValue
-                    : current + amount;
+            AddReduction(maxHpReduction, unit, amount);
 
             UpdateHpMax(unit);
         }
 
-        // 回復可能体力上限を取得
-        public static int GetRecoverableHpMax(BattleUnitModel unit)
+        // 回復可能体力減少量を取得
+        public static int GetRecoverableHpReduction(
+            BattleUnitModel unit)
         {
             if (unit == null)
                 return 0;
 
-            return Math.Max(
-                0,
-                unit.MaxHp - GetMaxHpReduction(unit)
-            );
+            return recoverableHpReduction.TryGetValue(unit, out int value)
+                ? value
+                : 0;
         }
 
-        // 現在体力が上限を超えていないか確認
-        public static void UpdateHpMax(BattleUnitModel unit)
+        // 回復可能体力を減少させる
+        public static void DecreaseRecoverableHp(
+            BattleUnitModel unit,
+            int amount)
         {
-            if (unit == null)
+            if (unit == null || amount <= 0)
                 return;
 
-            int maxHp = GetRecoverableHpMax(unit);
+            AddReduction(recoverableHpReduction, unit, amount);
 
-            if (unit.hp > maxHp)
-                unit.SetHp(maxHp);
+            UpdateHpMax(unit);
         }
 
         // パッシブとバフから修正値を取得
@@ -122,10 +149,40 @@ namespace HpModifierUtil
             return result;
         }
 
+        // 回復可能体力上限を取得
+        public static int GetRecoverableHpMax(BattleUnitModel unit)
+        {
+            if (unit == null)
+                return 0;
+
+            long result =
+                (long)unit.MaxHp - GetRecoverableHpReduction(unit);
+
+            return (int)Math.Max(0L, result);
+        }
+
+        // 現在体力を回復可能体力上限以下にする
+        public static void UpdateHpMax(BattleUnitModel unit)
+        {
+            if (unit == null)
+                return;
+
+            int maxRecoverableHp = GetRecoverableHpMax(unit);
+
+            // get_hp()内で再帰しないようにフィールドを直接参照
+            float currentHp = HpRef(unit);
+
+            if (currentHp > maxRecoverableHp)
+            {
+                ForceUtil.ForceSetHp(unit, maxRecoverableHp);
+            }
+        }
+
         // 戦闘データを初期化
         public static void Clear()
         {
             maxHpReduction.Clear();
+            recoverableHpReduction.Clear();
         }
     }
 }
