@@ -162,19 +162,26 @@ namespace HpModifierUtil
         }
 
         // 現在体力を回復可能体力上限以下にする
+        private static readonly HashSet<BattleUnitModel> updatingUnits = [];
+
         public static void UpdateHpMax(BattleUnitModel unit)
         {
-            if (unit == null)
+            if (unit == null || !updatingUnits.Add(unit))
                 return;
 
-            int maxRecoverableHp = GetRecoverableHpMax(unit);
-
-            // get_hp()内で再帰しないようにフィールドを直接参照
-            float currentHp = HpRef(unit);
-
-            if (currentHp > maxRecoverableHp)
+            try
             {
-                ForceUtil.ForceSetHp(unit, maxRecoverableHp);
+                int maxHp = GetRecoverableHpMax(unit);
+                float currentHp = HpRef(unit);
+
+                if (currentHp > maxHp)
+                {
+                    ForceUtil.ForceSetHp(unit, maxHp);
+                }
+            }
+            finally
+            {
+                updatingUnits.Remove(unit);
             }
         }
 
