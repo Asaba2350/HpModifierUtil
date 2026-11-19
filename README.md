@@ -1,59 +1,342 @@
-# HpModifierUtil
+# `using HpModifierUtil;`
 
-Library of Ruina向けのHP変更処理を拡張するMod開発者向けユーティリティです。
+名前空間 `HpModifierUtil` に存在するクラスです。
 
-## 概要
+この記事はこれを前提に書かれています。
 
-HpModifierUtilは、他のModから利用できるHP変更補正機能を提供します。
+# `HpModUtil`
 
-HPの増減量や最大HP、回復可能HPに対する補正を統一的に管理することを目的としています。
+体力の増減や最大体力に関する処理を提供するクラスです。
 
-## 主な機能
+```csharp
+// 最大体力を20減少させる
+HpModUtil.DecreaseMaxHp(unit, 20);
 
-- HP回復量の補正
-- HP減少量の補正
-- HP変更量の補正
-- 攻撃者側からのHP減少量補正
-- 最大HPの減少
-- 回復可能HP上限の減少
-- HPの直接設定
+// 回復可能体力上限を20減少させる
+HpModUtil.DecreaseRecoverableHp(unit, 20);
 
-## 導入方法
+// 体力を50に設定する
+HpModUtil.ForceSetHp(unit, 50);
+```
 
-1. HpModifierUtil.dllをLibrary of RuinaのMod環境に導入してください。
-2. 他のModから利用する場合は、HpModifierUtil.dllを参照に追加してください。
+## Specified usage
 
-## API
+### `DecreaseMaxHp(BattleUnitModel unit, int amount)`
 
-### HpModUtil
+```csharp
+HpModUtil.DecreaseMaxHp(unit, amount);
+```
 
-HP変更に関する機能を提供するクラスです。
+対象の最大体力を減少させます。
 
-| メソッド | 説明 |
-|---|---|
-| `DecreaseMaxHp(unit, amount)` | 最大HPを減少させる |
-| `DecreaseRecoverableHp(unit, amount)` | 回復可能HP上限を減少させる |
-| `ForceSetHp(unit, newHp)` | HPを直接設定する |
+複数回適用した場合、それぞれ加算されます。
 
-### 補正インターフェース
+`IMinMaxHp`によって設定された最大体力の最低値を下回ることはありません。
 
-各インターフェースを実装することで、PassiveやBattleUnitBufからHP変更補正を提供できます。
+* `unit`: 対象のユニットです。
+* `amount`: 最大体力の減少量です。0以下の場合は何も行いません。
 
-| インターフェース | 用途 |
-|---|---|
-| `IMinMaxHp` | 最小最大HPの設定 |
-| `IHpIncreaseModifier` | HP回復量の補正 |
-| `IHpDecreaseModifier` | HP減少量の補正 |
-| `IHpChangeModifier` | HP増減量の補正 |
-| `IHpAttackModifier` | 攻撃者側からのHP減少量補正 |
+### `DecreaseRecoverableHp(BattleUnitModel unit, int amount)`
 
-## 注意事項
+```csharp
+HpModUtil.DecreaseRecoverableHp(unit, amount);
+```
 
-- `DecreaseMaxHp`は最大HPそのものを減少させます。
-- `DecreaseRecoverableHp`は最大HPを基準として回復可能HP上限を減少させます。
-- `ForceSetHp`は通常のHP変更処理やHarmonyパッチを経由せず、HPを直接設定します。
-- 他ModによるHP変更・死亡処理への介入との競合が発生する可能性があります。
+対象の回復可能体力上限を減少させます。
 
-## ライセンス
+最大体力そのものは変更せず、最大体力を基準として回復可能体力上限を設定します。
 
-本プロジェクトは [MIT License](LICENSE) の下で公開されています。
+回復可能体力上限は以下のように計算されます。
+
+```csharp
+Math.Max(unit.Book.DeadLine, unit.MaxHp - reduction)
+```
+
+複数回適用した場合、それぞれ加算されます。
+
+* `unit`: 対象のユニットです。
+* `amount`: 回復可能体力上限の減少量です。0以下の場合は何も行いません。
+
+### `ForceSetHp(BattleUnitModel target, int newHp)`
+
+```csharp
+HpModUtil.ForceSetHp(target, newHp);
+```
+
+対象の体力を直接設定します。
+
+通常の体力変更処理を経由せず、内部の体力フィールドを直接書き換えます。
+
+そのため、通常の体力変更に適用される補正や、体力変更に伴う処理は実行されません。
+
+* `target`: 対象のユニットです。
+* `newHp`: 設定する体力です。
+
+`target`が`null`の場合は何も行いません。
+
+# Interfaces
+
+各インターフェースを`PassiveAbilityBase`または`BattleUnitBuf`に実装することで、体力変更に関する補正を提供できます。
+
+補正値は有効なパッシブと、破棄されていない有効なバフから取得されます。
+
+## `IMinMaxHp`
+
+最大体力の最低値を設定するためのインターフェースです。
+
+```csharp
+public class SamplePassive : PassiveAbilityBase, HpModUtil.IMinMaxHp
+{
+    public int? MinMaxHp => 150;
+}
+```
+
+### `MinMaxHp`
+
+```csharp
+public int? MinMaxHp { get; }
+```
+
+最大体力の最低値です。
+
+複数のパッシブやバフで設定されている場合、最も大きい値が適用されます。
+
+`null`を返した場合、このインターフェースからは最低値を設定しません。
+
+初期値は1です。
+
+## `IHpIncreaseModifier`
+
+体力回復量を補正するためのインターフェースです。
+
+```csharp
+public class SamplePassive : PassiveAbilityBase, HpModUtil.IHpIncreaseModifier
+{
+    // 回復量に固定値を加算
+    public float IncreaseFixed => 5f;
+
+    // 回復量を20%増加
+    public float IncreaseRate => 20f;
+}
+```
+
+### `IncreaseFixed`
+
+```csharp
+public float IncreaseFixed { get; }
+```
+
+体力回復量に加算する固定値です。
+
+複数回適用した場合、それぞれ加算されます。
+
+### `IncreaseRate`
+
+```csharp
+public float IncreaseRate { get; }
+```
+
+体力回復量に適用する割合補正です。
+
+複数回適用した場合、それぞれ加算されます。
+
+## `IHpDecreaseModifier`
+
+体力減少量を補正するためのインターフェースです。
+
+```csharp
+public class SamplePassive : PassiveAbilityBase, HpModUtil.IHpDecreaseModifier
+{
+    // 体力減少量に固定値を加算
+    public float DecreaseFixed => 5f;
+
+    // 体力減少量を20%増加
+    public float DecreaseRate => 20f;
+}
+```
+
+### `DecreaseFixed`
+
+```csharp
+public float DecreaseFixed { get; }
+```
+
+体力減少量に加算する固定値です。
+
+複数回適用した場合、それぞれ加算されます。
+
+正の値を設定すると体力減少量が増加し、負の値を設定すると体力減少量が減少します。
+
+### `DecreaseRate`
+
+```csharp
+public float DecreaseRate { get; }
+```
+
+体力減少量に適用する割合補正です。
+
+0以上の値は加算されます。
+
+負の値は乗算として適用されます。
+
+## `IHpChangeModifier`
+
+体力の増減両方を補正するためのインターフェースです。
+
+```csharp
+public class SamplePassive : PassiveAbilityBase, HpModUtil.IHpChangeModifier
+{
+    // 体力の増減量に固定値を加算
+    public float ChangeFixed => 5f;
+
+    // 体力の増減量を20%増加
+    public float ChangeRate => 20f;
+}
+```
+
+### `ChangeFixed`
+
+```csharp
+public float ChangeFixed { get; }
+```
+
+体力の増減量に加算する固定値です。
+
+複数回適用した場合、それぞれ加算されます。
+
+回復時には回復量に、減少時には減少量に適用されます。
+
+### `ChangeRate`
+
+```csharp
+public float ChangeRate { get; }
+```
+
+体力の増減量に適用する割合補正です。
+
+回復時には`IHpIncreaseModifier.IncreaseRate`と加算されます。
+
+減少時には`IHpDecreaseModifier.DecreaseRate`と同様に、0以上の値は加算、負の値は乗算として適用されます。
+
+## `IHpAttackModifier`
+
+攻撃者側から対象の体力減少量を補正するためのインターフェースです。
+
+```csharp
+public class SamplePassive : PassiveAbilityBase, HpModUtil.IHpAttackModifier
+{
+    // 対象の体力減少量に固定値を加算
+    public float AttackDecreaseFixed => 5f;
+
+    // 対象の体力減少量を20%増加
+    public float AttackDecreaseRate => 20f;
+}
+```
+
+### `AttackDecreaseFixed`
+
+```csharp
+public float AttackDecreaseFixed { get; }
+```
+
+攻撃対象の体力減少量に加算する固定値です。
+
+複数回適用した場合、それぞれ加算されます。
+
+### `AttackDecreaseRate`
+
+```csharp
+public float AttackDecreaseRate { get; }
+```
+
+攻撃対象の体力減少量に適用する割合補正です。
+
+0以上の値は加算されます。
+
+負の値は乗算として適用されます。
+
+このインターフェースは`TakeDamage`の攻撃者引数から取得されます。
+
+攻撃者が`null`の場合、この補正は適用されません。
+
+# Modifier calculation
+
+体力の増減処理では、対象のユニットに適用されている補正値を集計して計算します。
+
+攻撃者側の補正については、`IHpAttackModifier`から取得します。
+
+## Recovery
+
+体力回復時の計算式です。
+
+```text
+回復量 =
+    (元の回復量 + IncreaseFixed + ChangeFixed)
+    × (1 + (IncreaseRate + ChangeRate) / 100)
+```
+
+各補正値は、該当するインターフェースを実装した有効なパッシブとバフから取得されます。
+
+計算結果は整数に変換されます。
+
+補正によって回復量が負の値になる場合、回復量は0になります。
+
+## Decrease
+
+体力減少時の計算式です。
+
+```text
+体力減少量 =
+    (元の体力減少量 + DecreaseFixed + ChangeFixed + AttackDecreaseFixed)
+    × (1 + 加算率 / 100)
+    × 乗算率
+```
+
+加算率と乗算率は以下のように計算されます。
+
+### 加算率
+
+`DecreaseRate`、`ChangeRate`、`AttackDecreaseRate`のうち、0以上の値を合計します。
+
+### 乗算率
+
+負の値はそれぞれ乗算として適用されます。
+
+```text
+乗算率 =
+    (1 + rate1 / 100)
+    × (1 + rate2 / 100)
+    × ...
+```
+
+各乗算結果は0未満になりません。
+
+例えば、-20%と-30%を適用した場合、乗算率は0.8 × 0.7 = 0.56になります。
+
+計算結果は整数に変換されます。
+
+補正によって体力減少量が負の値になる場合、体力減少量は0になります。
+
+# Notes
+
+- 補正値は、対象ユニットの有効なパッシブと有効なバフから取得されます。
+- 体力の増減量は整数として計算されます。小数部分は四捨五入されません。
+- `DecreaseMaxHp`は最大体力そのものを減少させます。
+- `DecreaseRecoverableHp`は最大体力を基準に回復可能体力上限を減少させます。最大体力の取得には`BattleUnitModel.MaxHp`を使用します。
+- 回復可能体力上限が`unit.Book.DeadLine`に達した場合、通常の`Die()`による死亡処理を試みます。同じユニットへの死亡処理の試行は1幕につき1回です。
+- 他Modによって死亡処理が阻止された場合、その幕の間は再試行しません。
+- `ForceSetHp`は通常の体力変更処理を経由しないため、使用時には注意してください。
+
+# Loading
+
+本ライブラリは`DeviceOfHermes.Boot.HermesInitializer`を利用して初期化されます。
+
+読み込みにはDeviceOfHermesのHermesPreloaderが必要です。
+
+`HpModifierUtil.dll`は`Assemblies/HermesAssemblies/`フォルダに配置してください。
+
+同じAssemblyNameのDLLが複数存在する場合、HermesPreloaderによって最新のFileVersionを持つDLLがロードされます。
+
+# License
+
+本プロジェクトは[MIT License](LICENSE.txt)の下で公開されています。
