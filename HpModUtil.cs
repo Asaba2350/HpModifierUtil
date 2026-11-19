@@ -2,6 +2,7 @@
 
 namespace HpModifierUtil
 {
+    //外部公開用
     public class HpModUtil
     {
         public interface IMinMaxHp
