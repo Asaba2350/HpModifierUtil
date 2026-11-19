@@ -163,5 +163,39 @@ namespace HpModifierUtil
                 MaxHpModifierManager.Clear();
             }
         }
+
+        [HarmonyPatch(typeof(StageController), "RoundStartPhase_System")]
+        public static class RoundStartPhase_SystemPatch
+        {
+            public static void Prefix(StageController __instance)
+            {
+                MaxHpModifierManager.DieClear();
+            }
+        }
+
+        [HarmonyPatch(typeof(BattleUnitModel), nameof(BattleUnitModel.RecoverHP))]
+        public static class RecoverHPPatch
+        {
+            public static void Prefix()
+            {
+                MaxHpModifierManager.updateLock++;
+            }
+
+            public static Exception Finalizer(Exception __exception)
+            {
+                MaxHpModifierManager.updateLock--;
+
+                if (MaxHpModifierManager.updateLock == 0)
+                {
+                    foreach (BattleUnitModel unit in BattleObjectManager.instance.GetAliveList())
+                    {
+                        MaxHpModifierManager.UpdateHpMax(unit);
+                    }
+                }
+
+                return __exception;
+            }
+        }
+
     }
 }

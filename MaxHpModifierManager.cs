@@ -152,15 +152,25 @@ namespace HpModifierUtil
             long result =
                 (long)unit.MaxHp - GetRecoverableHpReduction(unit);
 
-            return (int)Math.Max(0L, result);
+            return (int)Math.Max(unit.Book.DeadLine, result);
         }
 
         // 現在体力を回復可能体力上限以下にする
         private static readonly HashSet<BattleUnitModel> updatingUnits = [];
 
+        // 無限ループ防止のため死亡処理は1幕に1回のみ
+        private static readonly HashSet<BattleUnitModel> ForcedDeathUnits = [];
+
+        internal static int updateLock = 0;
+
+        internal static void DieClear()
+        {
+            ForcedDeathUnits.Clear();
+        }
+
         internal static void UpdateHpMax(BattleUnitModel unit)
         {
-            if (unit == null || !updatingUnits.Add(unit))
+            if (unit == null || updateLock != 0 || !updatingUnits.Add(unit))
                 return;
 
             try
@@ -169,8 +179,12 @@ namespace HpModifierUtil
                 float currentHp = HpRef(unit);
 
                 if (currentHp > maxHp)
-                {
                     HpModUtil.ForceSetHp(unit, maxHp);
+
+                if (maxHp <= unit.Book.DeadLine)
+                {
+                    if (ForcedDeathUnits.Add(unit))
+                        unit.Die();
                 }
             }
             finally
