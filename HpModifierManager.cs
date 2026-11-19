@@ -17,7 +17,7 @@ namespace HpModifierUtil
             public readonly float RateMultiplier = rateMultiplier;
         }
 
-        private static readonly Dictionary<BattleUnitModel, AttackSnapshot> AttackSnapshots = [];
+        private static readonly Dictionary<BattleUnitModel, Stack<AttackSnapshot>> AttackSnapshots = [];
 
         #region 攻撃者補正の一時保管
 
@@ -27,28 +27,67 @@ namespace HpModifierUtil
                 return;
 
             GetHpAttackRate(attacker, out float additive, out float multiplier);
-            AttackSnapshots[unit] = new AttackSnapshot(GetHpAttackFixed(attacker), additive, multiplier);
+
+            var snapshot = new AttackSnapshot(
+                GetHpAttackFixed(attacker),
+                additive,
+                multiplier
+            );
+
+            if (!AttackSnapshots.TryGetValue(unit, out Stack<AttackSnapshot> stack))
+            {
+                stack = new Stack<AttackSnapshot>();
+                AttackSnapshots.Add(unit, stack);
+            }
+
+            stack.Push(snapshot);
         }
 
         internal static void Reset(BattleUnitModel unit)
         {
-            AttackSnapshots.Remove(unit);
+            if (!AttackSnapshots.TryGetValue(unit, out Stack<AttackSnapshot> stack))
+                return;
+
+            if (stack.Count > 0)
+                stack.Pop();
+
+            if (stack.Count == 0)
+                AttackSnapshots.Remove(unit);
+        }
+
+        private static bool TryGetAttackSnapshot(BattleUnitModel unit, out AttackSnapshot snapshot)
+        {
+            if (AttackSnapshots.TryGetValue(unit, out Stack<AttackSnapshot> stack)
+                && stack.Count > 0)
+            {
+                snapshot = stack.Peek();
+                return true;
+            }
+
+            snapshot = default;
+            return false;
         }
 
         internal static float GetFixed(BattleUnitModel unit)
         {
-            return AttackSnapshots.TryGetValue(unit, out AttackSnapshot s) ? s.Fixed : 0f;
+            return TryGetAttackSnapshot(unit, out AttackSnapshot snapshot)
+                ? snapshot.Fixed
+                : 0f;
         }
 
         internal static float GetRateAdditive(BattleUnitModel unit)
         {
-            return AttackSnapshots.TryGetValue(unit, out AttackSnapshot s) ? s.RateAdditive : 0f;
+            return TryGetAttackSnapshot(unit, out AttackSnapshot snapshot)
+                ? snapshot.RateAdditive
+                : 0f;
         }
 
         internal static float GetRateMultiplier(BattleUnitModel unit)
         {
-            // 未登録時は「補正なし」= 1 を返す(0 を返すとダメージが全て無効化される)
-            return AttackSnapshots.TryGetValue(unit, out AttackSnapshot s) ? s.RateMultiplier : 1f;
+            // 未登録時は「補正なし」= 1 を返す
+            return TryGetAttackSnapshot(unit, out AttackSnapshot snapshot)
+                ? snapshot.RateMultiplier
+                : 1f;
         }
 
         #endregion
