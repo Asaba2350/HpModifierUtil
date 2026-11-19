@@ -3,9 +3,9 @@ using System;
 
 namespace HpModifierUtil
 {
-    public class HpModifierInitializer : ModInitializer
+    public class HpModifierInitializer : DeviceOfHermes.Boot.HermesInitializer
     {
-        public override void OnInitializeMod()
+        public void OnInitMod()
         {
             ApplyHarmonyPatch();
         }
