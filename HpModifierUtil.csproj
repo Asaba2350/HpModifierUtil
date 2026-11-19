@@ -54,7 +54,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="ForceUtil.cs" />
+    <Compile Include="HpModUtil.cs" />
     <Compile Include="HpModifierInitializer.cs" />
     <Compile Include="HpModifierManager.cs" />
     <Compile Include="MaxHpModifierManager.cs" />

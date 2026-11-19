@@ -4,7 +4,7 @@ using System.Collections.Generic;
 
 namespace HpModifierUtil
 {
-    public static class MaxHpModifierManager
+    internal static class MaxHpModifierManager
     {
         // 最大体力減少量
         private static readonly Dictionary<BattleUnitModel, int>
@@ -19,12 +19,6 @@ namespace HpModifierUtil
             HpRef = AccessTools.FieldRefAccess<BattleUnitModel, float>(
                 "<hp>k__BackingField"
             );
-
-        // 外部Modが実装する最低最大体力提供インターフェイス
-        public interface IMinMaxHp
-        {
-            int? MinMaxHp { get; }
-        }
 
         // 減少量を安全に加算
         private static void AddReduction(
@@ -46,7 +40,7 @@ namespace HpModifierUtil
         }
 
         // 最大体力減少量を取得
-        public static int GetMaxHpReduction(BattleUnitModel unit)
+        internal static int GetMaxHpReduction(BattleUnitModel unit)
         {
             if (unit == null)
                 return 0;
@@ -57,7 +51,7 @@ namespace HpModifierUtil
         }
 
         // 最大体力を減少させる
-        public static void DecreaseMaxHp(
+        internal static void DecreaseMaxHp(
             BattleUnitModel unit,
             int amount)
         {
@@ -70,7 +64,7 @@ namespace HpModifierUtil
         }
 
         // 回復可能体力減少量を取得
-        public static int GetRecoverableHpReduction(
+        internal static int GetRecoverableHpReduction(
             BattleUnitModel unit)
         {
             if (unit == null)
@@ -82,7 +76,7 @@ namespace HpModifierUtil
         }
 
         // 回復可能体力を減少させる
-        public static void DecreaseRecoverableHp(
+        internal static void DecreaseRecoverableHp(
             BattleUnitModel unit,
             int amount)
         {
@@ -131,11 +125,11 @@ namespace HpModifierUtil
         }
 
         // 最低最大体力を取得
-        public static int GetMinMaxHp(BattleUnitModel unit)
+        internal static int GetMinMaxHp(BattleUnitModel unit)
         {
             int result = 1;
 
-            foreach (IMinMaxHp provider in GetModifiers<IMinMaxHp>(unit))
+            foreach (HpModUtil.IMinMaxHp provider in GetModifiers<HpModUtil.IMinMaxHp>(unit))
             {
                 if (provider.MinMaxHp.HasValue)
                 {
@@ -150,7 +144,7 @@ namespace HpModifierUtil
         }
 
         // 回復可能体力上限を取得
-        public static int GetRecoverableHpMax(BattleUnitModel unit)
+        internal static int GetRecoverableHpMax(BattleUnitModel unit)
         {
             if (unit == null)
                 return 0;
@@ -164,7 +158,7 @@ namespace HpModifierUtil
         // 現在体力を回復可能体力上限以下にする
         private static readonly HashSet<BattleUnitModel> updatingUnits = [];
 
-        public static void UpdateHpMax(BattleUnitModel unit)
+        internal static void UpdateHpMax(BattleUnitModel unit)
         {
             if (unit == null || !updatingUnits.Add(unit))
                 return;
@@ -176,7 +170,7 @@ namespace HpModifierUtil
 
                 if (currentHp > maxHp)
                 {
-                    ForceUtil.ForceSetHp(unit, maxHp);
+                    HpModUtil.ForceSetHp(unit, maxHp);
                 }
             }
             finally
@@ -186,7 +180,7 @@ namespace HpModifierUtil
         }
 
         // 戦闘データを初期化
-        public static void Clear()
+        internal static void Clear()
         {
             maxHpReduction.Clear();
             recoverableHpReduction.Clear();
