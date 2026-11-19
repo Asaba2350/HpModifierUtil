@@ -93,5 +93,79 @@ namespace HpModifierUtil
                 return __exception;
             }
         }
+
+        [HarmonyPatch(typeof(BattleUnitModel), "get_MaxHp")]
+        public static class MaxHpPatch
+        {
+            public static void Postfix(
+                BattleUnitModel __instance,
+                ref int __result)
+            {
+                if (__instance == null)
+                    return;
+
+                int min = MaxHpModifierManager.GetMinMaxHp(__instance);
+
+                if (__result < min)
+                    __result = min;
+            }
+        }
+
+        // HP取得時に回復可能体力上限を適用
+        [HarmonyPatch]
+        public static class GetHpPatch
+        {
+            public static MethodBase TargetMethod()
+            {
+                return AccessTools.Method(
+                    typeof(BattleUnitModel),
+                    "get_hp"
+                );
+            }
+
+            public static void Prefix(BattleUnitModel __instance)
+            {
+                MaxHpModifierManager.UpdateHpMax(__instance);
+            }
+        }
+
+        // HP変更後に回復可能体力上限を適用
+        [HarmonyPatch]
+        public static class SetHpPatch
+        {
+            public static MethodBase TargetMethod()
+            {
+                return AccessTools.Method(
+                    typeof(BattleUnitModel),
+                    "set_hp",
+                    new Type[] { typeof(float) }
+                );
+            }
+
+            public static void Postfix(BattleUnitModel __instance)
+            {
+                MaxHpModifierManager.UpdateHpMax(__instance);
+            }
+        }
+
+        // 戦闘開始時に初期化
+        [HarmonyPatch(typeof(StageController), nameof(StageController.StartBattle))]
+        public static class StartBattlePatch
+        {
+            public static void Prefix()
+            {
+                MaxHpModifierManager.Clear();
+            }
+        }
+
+        // 戦闘終了時に初期化
+        [HarmonyPatch(typeof(StageController), nameof(StageController.EndBattle))]
+        public static class EndBattlePatch
+        {
+            public static void Postfix()
+            {
+                MaxHpModifierManager.Clear();
+            }
+        }
     }
 }
