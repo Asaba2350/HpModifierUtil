@@ -10,7 +10,7 @@ Library of Ruina Modding向けの体力変更処理ライブラリです。
 
 GitHub → [Repository URL](https://github.com/Asaba2350/HpModifierUtil)
 
-Steam Workshop → [Workshop URL](WORKSHOP_URL)
+Steam Workshop → [Workshop URL](https://steamcommunity.com/sharedfiles/filedetails/?id=3842620046)
 
 ## Includes Your MOD
 
@@ -117,7 +117,7 @@ HpModUtil.ForceSetHp(target, newHp);
 
 各インターフェースを`PassiveAbilityBase`または`BattleUnitBuf`に実装することで、体力変更に関する補正を提供できます。
 
-補正値は有効なパッシブと、破棄されていない有効なバフから取得されます。
+補正値は有効なパッシブと、有効なバフから取得されます。
 
 ## `IMinMaxHp`
 
