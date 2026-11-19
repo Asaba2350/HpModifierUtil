@@ -1,3 +1,42 @@
+# HpModifierUtil
+
+Library of Ruina Modding向けの体力変更処理ライブラリです。
+
+体力の増減補正、最大体力の減少、回復可能体力上限の設定など、体力に関する機能を提供します。
+
+主に他のModから利用されることを想定しています。
+
+## Distribution
+
+GitHub → [Repository URL](https://github.com/Asaba2350/HpModifierUtil)
+
+Steam Workshop → [Workshop URL](WORKSHOP_URL)
+
+## Includes Your MOD
+
+HpModifierUtilを利用するModを作成する場合、以下の準備が必要です。
+
+1. Modフォルダ内の `Assemblies/HermesAssemblies/` フォルダに `HpModifierUtil.dll` を配置してください。
+   `HermesAssemblies` フォルダが存在しない場合は作成してください。
+2. 配置した `HpModifierUtil.dll` を参照に追加してください。
+3. Modを公開する際、前提Modとして `Device Of Hermes` を指定してください。
+
+詳しくは [Device Of Hermes - HermesPreloader](https://tundraclimate.github.io/DeviceOfHermes/docs/hermes-preloader.html) のドキュメントを参照してください。
+
+## Features
+
+- 体力回復量の補正
+- 体力減少量の補正
+- 体力増減量の補正
+- 攻撃者側からの体力減少量補正
+- 最大体力の減少
+- 回復可能体力上限の減少
+- 体力の直接設定
+
+## API Reference
+
+以降では、HpModifierUtilが提供するクラス・インターフェースについて説明します。
+
 # `using HpModifierUtil;`
 
 名前空間 `HpModifierUtil` に存在するクラスです。
@@ -326,16 +365,6 @@ public float AttackDecreaseRate { get; }
 - 回復可能体力上限が`unit.Book.DeadLine`に達した場合、通常の`Die()`による死亡処理を試みます。同じユニットへの死亡処理の試行は1幕につき1回です。
 - 他Modによって死亡処理が阻止された場合、その幕の間は再試行しません。
 - `ForceSetHp`は通常の体力変更処理を経由しないため、使用時には注意してください。
-
-# Loading
-
-本ライブラリは`DeviceOfHermes.Boot.HermesInitializer`を利用して初期化されます。
-
-読み込みにはDeviceOfHermesのHermesPreloaderが必要です。
-
-`HpModifierUtil.dll`は`Assemblies/HermesAssemblies/`フォルダに配置してください。
-
-同じAssemblyNameのDLLが複数存在する場合、HermesPreloaderによって最新のFileVersionを持つDLLがロードされます。
 
 # License
 
