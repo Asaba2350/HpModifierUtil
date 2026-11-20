@@ -197,5 +197,29 @@ namespace HpModifierUtil
             }
         }
 
+        [HarmonyPatch(typeof(BattleUnitEmotionDetail), nameof(BattleUnitEmotionDetail.ApplyEmotionCard))]
+        public static class ApplyEmotionCardPatch
+        {
+            public static void Prefix()
+            {
+                MaxHpModifierManager.updateLock++;
+            }
+
+            public static Exception Finalizer(Exception __exception)
+            {
+                MaxHpModifierManager.updateLock--;
+
+                if (MaxHpModifierManager.updateLock == 0)
+                {
+                    foreach (BattleUnitModel unit in BattleObjectManager.instance.GetAliveList())
+                    {
+                        MaxHpModifierManager.UpdateHpMax(unit);
+                    }
+                }
+
+                return __exception;
+            }
+        }
+
     }
 }
