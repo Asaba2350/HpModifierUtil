@@ -150,6 +150,7 @@ namespace HpModifierUtil
         {
             public static void Prefix()
             {
+                MaxHpModifierManager.firstLock = true;
                 MaxHpModifierManager.Clear();
             }
         }
@@ -220,6 +221,5 @@ namespace HpModifierUtil
                 return __exception;
             }
         }
-
     }
 }

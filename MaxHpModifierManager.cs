@@ -58,6 +58,8 @@ namespace HpModifierUtil
             if (unit == null || amount <= 0)
                 return;
 
+            firstLock = false;
+
             AddReduction(maxHpReduction, unit, amount);
 
             UpdateHpMax(unit);
@@ -82,6 +84,8 @@ namespace HpModifierUtil
         {
             if (unit == null || amount <= 0)
                 return;
+
+            firstLock = false;
 
             AddReduction(recoverableHpReduction, unit, amount);
 
@@ -163,6 +167,8 @@ namespace HpModifierUtil
 
         internal static int updateLock = 0;
 
+        internal static bool firstLock = false;
+
         internal static void DieClear()
         {
             ForcedDeathUnits.Clear();
@@ -170,7 +176,7 @@ namespace HpModifierUtil
 
         internal static void UpdateHpMax(BattleUnitModel unit)
         {
-            if (unit == null || updateLock != 0 || !updatingUnits.Add(unit))
+            if (unit == null || firstLock || updateLock != 0 || !updatingUnits.Add(unit))
                 return;
 
             try
