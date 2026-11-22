@@ -32,14 +32,14 @@ namespace HpModifierUtil
                 if (delta > 0)
                 {
                     // TakeDamage で一旦減らしてから戻すケース用のガード
-                    if (__instance.IsImmortal() && __instance.hp <= 1f)
+                    if (__instance.IsImmortal() && __instance.hp <= 1f && target == 1)
                     {
                         value = 1f;
                         return;
                     }
 
                     int minHp = __instance.GetMinHp();
-                    if (__instance.hp < (float)minHp)
+                    if (__instance.hp < (float)minHp && minHp == target)
                     {
                         value = (float)minHp;
                         return;
